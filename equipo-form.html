@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Equipo')}"></head>
+<body>
+<div class="wrapper">
+    <div th:replace="~{fragments/layout :: sidebar('equipos')}"></div>
+    
+    <div class="main-area">
+        <div th:replace="~{fragments/layout :: topbar}"></div>
+        
+    <div id="content">
+        <h2 class="page-title" style="margin-bottom:22px;">
+            Equipos >
+            <span class="breadcrumb-text" th:text="${modoEdicion} ? 'Editar Equipo' : 'Nuevo Equipo'"></span>
+        </h2>
+        <div class="form-section shadow-sm" style="max-width:600px;">
+            <form th:action="@{/equipos/guardar}" th:object="${equipo}" method="post">
+                <input type="hidden" th:field="*{id}"/>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Código Patrimonial *</label>
+                        <input type="text" th:field="*{codigoPatrimonial}" class="form-control"
+                               th:classappend="${#fields.hasErrors('codigoPatrimonial')} ? 'is-invalid'"
+                               placeholder="Ej: UNS-003"/>
+                        <div class="invalid-feedback" th:errors="*{codigoPatrimonial}"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Nombre del Equipo *</label>
+                        <input type="text" th:field="*{nombre}" class="form-control"
+                               th:classappend="${#fields.hasErrors('nombre')} ? 'is-invalid'"
+                               placeholder="Ej: Laptop HP ProBook"/>
+                        <div class="invalid-feedback" th:errors="*{nombre}"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Tipo *</label>
+                        <select th:field="*{tipo}" class="form-select">
+                            <option value="">-- Seleccionar --</option>
+                            <option value="LAPTOP">Laptop</option>
+                            <option value="PROYECTOR">Proyector</option>
+                        </select>
+                        <div class="invalid-feedback" th:errors="*{tipo}"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Estado</label>
+                        <select th:field="*{estado}" class="form-select">
+                            <option value="DISPONIBLE">Disponible</option>
+                            <option value="MANTENIMIENTO">Mantenimiento</option>
+                            <option value="BAJA">Baja</option>
+                        </select>
+                    </div>
+                    <div class="col-12 mt-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-blue px-4">
+                            <i class="fa-solid fa-save me-1"></i>Guardar
+                        </button>
+                        <a th:href="@{/equipos}" class="btn btn-light border">Cancelar</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

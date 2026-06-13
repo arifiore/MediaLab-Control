@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Dashboard')}"></head>
+<body>
+<div class="wrapper">
+    <div th:replace="~{fragments/layout :: sidebar('dashboard')}"></div>
+
+    <div class="main-area">
+        <div th:replace="~{fragments/layout :: topbar}"></div>
+        
+    <div id="content">
+
+        <!-- Alerts -->
+        <div th:if="${exito}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fa-solid fa-check-circle me-2"></i><span th:text="${exito}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fa-solid fa-triangle-exclamation me-2"></i><span th:text="${error}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div class="page-header">
+            <h1 class="page-title">Dashboard</h1>
+            <a th:href="@{/prestamos/registrar}" class="btn btn-blue px-4">
+                <i class="fa-solid fa-plus me-2"></i>Nuevo Préstamo
+            </a>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="stat-card shadow-sm">
+                    <div class="stat-icon bg-blue"><i class="fa-solid fa-desktop"></i></div>
+                    <div class="stat-info">
+                        <h6>Equipos Totales</h6>
+                        <h3 th:text="${totalEquipos}">0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card shadow-sm">
+                    <div class="stat-icon bg-green"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="stat-info">
+                        <h6>Disponibles</h6>
+                        <h3 th:text="${disponibles}">0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card shadow-sm">
+                    <div class="stat-icon bg-orange"><i class="fa-solid fa-box-open"></i></div>
+                    <div class="stat-info">
+                        <h6>Prestados</h6>
+                        <h3 th:text="${prestados}">0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card shadow-sm">
+                    <div class="stat-icon bg-red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="stat-info">
+                        <h6>En Mora</h6>
+                        <h3 th:text="${#lists.size(prestamosEnMora)}">0</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Préstamos Activos -->
+            <div class="col-lg-8">
+                <div class="panel-card shadow-sm">
+                    <div class="panel-header">
+                        <span><i class="fa-solid fa-handshake me-2 text-primary"></i>Préstamos Activos</span>
+                        <a th:href="@{/prestamos/reporte/excel}" class="btn btn-sm btn-outline-success">
+                            <i class="fa-solid fa-file-excel me-1"></i>Excel
+                        </a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Equipo</th>
+                                    <th>Docente</th>
+                                    <th>Salida</th>
+                                    <th>Límite</th>
+                                    <th>Estado</th>
+                                    <th class="text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="p : ${prestamosActivos}">
+                                    <td class="text-secondary fw-bold" th:text="${p.equipo.codigoPatrimonial}"></td>
+                                    <td th:text="${p.equipo.nombre}"></td>
+                                    <td th:text="${p.docente.nombres}"></td>
+                                    <td th:text="${#temporals.format(p.fechaSalida,'dd/MM/yyyy')}"></td>
+                                    <td th:text="${#temporals.format(p.fechaLimite,'dd/MM/yyyy')}"></td>
+                                    <td>
+                                        <span th:if="${p.calcularDiasMora() > 0}" class="badge-mora">
+                                            <i class="fa-solid fa-clock me-1"></i>MORA: <span th:text="${p.calcularDiasMora()}"></span>d
+                                        </span>
+                                        <span th:unless="${p.calcularDiasMora() > 0}" class="badge-disponible">
+                                            En tiempo
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <form th:action="@{/prestamos/devolver/{id}(id=${p.id})}" method="post" style="display:inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-success"
+                                                    onclick="return confirm('¿Confirmar devolución?')">
+                                                <i class="fa-solid fa-rotate-left"></i> Devolver
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(prestamosActivos)}">
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        <i class="fa-solid fa-inbox me-2"></i>No hay préstamos activos en este momento.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Mora + Avisos -->
+            <div class="col-lg-4">
+                <div class="panel-card shadow-sm mb-3" th:if="${not #lists.isEmpty(prestamosEnMora)}">
+                    <div class="panel-header" style="color:#dc2626;">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>Alertas de Mora
+                    </div>
+                    <ul class="list-unstyled mb-0 p-3">
+                        <li th:each="p : ${prestamosEnMora}" class="mb-3 pb-3 border-bottom">
+                            <div class="fw-bold text-danger" th:text="${p.equipo.nombre}"></div>
+                            <div class="small text-muted" th:text="${p.docente.nombres}"></div>
+                            <div class="small mt-1">
+                                <span class="badge-mora" th:text="${p.calcularDiasMora()} + ' días de retraso'"></span>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="panel-card shadow-sm">
+                    <div class="panel-header"><i class="fa-solid fa-bell me-2 text-warning"></i>Avisos</div>
+                    <div class="p-3">
+                        <p class="small mb-2">
+                            <i class="fa-solid fa-circle text-secondary me-2" style="font-size:6px;vertical-align:middle;"></i>
+                            <span th:text="${#lists.size(prestamosEnMora)} + ' préstamo(s) con mora activa.'"></span>
+                        </p>
+                        <p class="small mb-2">
+                            <i class="fa-solid fa-circle text-secondary me-2" style="font-size:6px;vertical-align:middle;"></i>
+                            <span th:text="${disponibles} + ' equipo(s) disponibles para préstamo.'"></span>
+                        </p>
+                        <p class="small mb-0">
+                            <i class="fa-solid fa-circle text-secondary me-2" style="font-size:6px;vertical-align:middle;"></i>
+                            Servidor local operativo — localhost:8080
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

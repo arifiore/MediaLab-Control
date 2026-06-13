@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Docentes')}"></head>
+<body>
+<div class="wrapper">
+    <div th:replace="~{fragments/layout :: sidebar('docentes')}"></div>
+    
+    <div class="main-area">
+        <div th:replace="~{fragments/layout :: topbar}"></div>
+
+    <div id="content">
+        <div th:if="${exito}" class="alert alert-success alert-dismissible fade show">
+            <i class="fa-solid fa-check-circle me-2"></i><span th:text="${exito}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+            <i class="fa-solid fa-triangle-exclamation me-2"></i><span th:text="${error}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div class="page-header">
+            <h2 class="page-title">Gestión de Docentes <span class="breadcrumb-text">> Listado</span></h2>
+            <a th:href="@{/docentes/nuevo}" class="btn btn-blue px-4">
+                <i class="fa-solid fa-user-plus me-2"></i>Nuevo Docente
+            </a>
+        </div>
+
+        <form th:action="@{/docentes}" method="get" class="filter-section shadow-sm">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-8">
+                    <label>Buscar:</label>
+                    <input type="text" name="q" class="form-control" th:value="${q}"
+                           placeholder="DNI, nombre o facultad...">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-blue w-100">
+                        <i class="fa-solid fa-search me-1"></i>Buscar
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <a th:href="@{/docentes}" class="btn btn-light border w-100">Limpiar</a>
+                </div>
+            </div>
+        </form>
+
+        <div class="table-card shadow-sm">
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>DNI</th>
+                            <th>Nombres</th>
+                            <th>Facultad</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="d : ${docentes}">
+                            <td th:text="${d.id}"></td>
+                            <td class="fw-bold text-secondary" th:text="${d.dni}"></td>
+                            <td th:text="${d.nombres}"></td>
+                            <td th:text="${d.facultad}"></td>
+                            <td class="text-center">
+                                <a th:href="@{/docentes/editar/{id}(id=${d.id})}" class="btn-action" title="Editar">
+                                    <i class="fa-solid fa-user-pen"></i>
+                                </a>
+                                <form th:action="@{/docentes/eliminar/{id}(id=${d.id})}" method="post" style="display:inline">
+                                    <button type="submit" class="btn-action danger" title="Eliminar"
+                                            onclick="return confirm('¿Eliminar este docente?')">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(docentes)}">
+                            <td colspan="5" class="text-center text-muted py-5">
+                                <i class="fa-solid fa-users-slash fa-2x mb-2 d-block"></i>No se encontraron docentes.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="table-footer">
+                <div class="text-muted small">
+                    <span th:text="${#lists.size(docentes)}">0</span> registro(s) encontrado(s)
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

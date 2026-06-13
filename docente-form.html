@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Docente')}"></head>
+<body>
+<div class="wrapper">
+    <div th:replace="~{fragments/layout :: sidebar('docentes')}"></div>
+    
+    <div class="main-area">
+        <div th:replace="~{fragments/layout :: topbar}"></div>
+        
+    <div id="content">
+        <h2 class="page-title" style="margin-bottom:22px;">
+            Docentes >
+            <span class="breadcrumb-text" th:text="${modoEdicion} ? 'Editar Docente' : 'Nuevo Docente'"></span>
+        </h2>
+        <div class="form-section shadow-sm" style="max-width:560px;">
+            <form th:action="@{/docentes/guardar}" th:object="${docente}" method="post">
+                <input type="hidden" th:field="*{id}"/>
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label">DNI *</label>
+                        <input type="text" th:field="*{dni}" class="form-control"
+                               th:classappend="${#fields.hasErrors('dni')} ? 'is-invalid'"
+                               maxlength="8" placeholder="12345678"/>
+                        <div class="invalid-feedback" th:errors="*{dni}"></div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Nombres y Apellidos *</label>
+                        <input type="text" th:field="*{nombres}" class="form-control"
+                               th:classappend="${#fields.hasErrors('nombres')} ? 'is-invalid'"
+                               placeholder="Ej: Ing. Carlos Mendoza"/>
+                        <div class="invalid-feedback" th:errors="*{nombres}"></div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Facultad *</label>
+                        <select th:field="*{facultad}" class="form-select">
+                            <option value="">-- Seleccionar facultad --</option>
+                            <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
+                            <option value="Ingeniería Industrial">Ingeniería Industrial</option>
+                            <option value="Ciencias de la Comunicación">Ciencias de la Comunicación</option>
+                            <option value="Arquitectura">Arquitectura</option>
+                            <option value="Ciencias de la Salud">Ciencias de la Salud</option>
+                            <option value="Derecho">Derecho</option>
+                            <option value="Administración">Administración</option>
+                        </select>
+                        <div class="invalid-feedback" th:errors="*{facultad}"></div>
+                    </div>
+                    <div class="col-12 mt-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-blue px-4">
+                            <i class="fa-solid fa-save me-1"></i>Guardar
+                        </button>
+                        <a th:href="@{/docentes}" class="btn btn-light border">Cancelar</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

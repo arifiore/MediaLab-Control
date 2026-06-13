@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Nuevo Préstamo')}"></head>
+<body>
+<div class="wrapper">
+    <div th:replace="~{fragments/layout :: sidebar('prestamos')}"></div>
+    
+    <div class="main-area">
+        <div th:replace="~{fragments/layout :: topbar}"></div>
+
+    <div id="content">
+        <div th:if="${exito}" class="alert alert-success alert-dismissible fade show">
+            <i class="fa-solid fa-check-circle me-2"></i><span th:text="${exito}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+            <i class="fa-solid fa-triangle-exclamation me-2"></i><span th:text="${error}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <h2 class="page-title" style="margin-bottom:22px;">
+            Préstamos <span class="breadcrumb-text">> Nuevo Préstamo</span>
+        </h2>
+
+        <form th:action="@{/prestamos/registrar}" method="post" id="formPrestamo">
+
+            <!-- PASO 1: Docente -->
+            <div class="form-section shadow-sm">
+                <div class="section-title">
+                    <span class="step-badge">1</span> Datos del Docente Solicitante
+                </div>
+                <div class="row align-items-end g-3 mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">DNI del Docente:</label>
+                        <input type="text" id="dniInput" class="form-control" maxlength="8"
+                               placeholder="Ej: 44556677" autocomplete="off">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-blue w-100" onclick="buscarDocente()">
+                            <i class="fa-solid fa-search me-1"></i>Buscar
+                        </button>
+                    </div>
+                    <div class="col-md-7" id="docenteInfo" style="display:none;">
+                        <div class="alert alert-success py-2 mb-0">
+                            <i class="fa-solid fa-user-check me-2"></i>
+                            <strong id="docenteNombre"></strong> &mdash;
+                            <span id="docenteFacultad" class="text-muted"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-7" id="docenteError" style="display:none;">
+                        <div class="alert alert-danger py-2 mb-0">
+                            <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                            Docente no encontrado con ese DNI.
+                        </div>
+                    </div>
+                </div>
+                <!-- Hidden field que va al controller -->
+                <input type="hidden" name="dniDocente" id="dniDocente">
+            </div>
+
+            <!-- PASO 2: Equipo -->
+            <div class="form-section shadow-sm">
+                <div class="section-title">
+                    <span class="step-badge">2</span> Equipo a Prestar
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Seleccionar Equipo Disponible:</label>
+                        <select name="codigoEquipo" id="equipoSelect" class="form-select" required
+                                onchange="actualizarInfoEquipo()">
+                            <option value="">-- Seleccione un equipo --</option>
+                            <option th:each="e : ${equiposDisponibles}"
+                                    th:value="${e.codigoPatrimonial}"
+                                    th:text="${e.codigoPatrimonial + ' — ' + e.nombre + ' (' + e.tipo + ')'}">
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end" id="equipoEstado" style="display:none!important;">
+                        <div class="alert alert-success py-2 mb-0 w-100">
+                            <i class="fa-solid fa-circle-check me-2"></i>
+                            Estado: <span class="badge-disponible ms-1">DISPONIBLE</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PASO 3: Fechas -->
+            <div class="form-section shadow-sm">
+                <div class="section-title">
+                    <span class="step-badge">3</span> Plazo del Préstamo
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha de Salida:</label>
+                        <input type="text" class="form-control" th:value="${#temporals.format(#temporals.createNow(),'dd/MM/yyyy')}" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha Límite de Devolución:</label>
+                        <input type="date" name="fechaLimite" id="fechaLimite" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón submit -->
+            <button type="submit" class="btn w-100 shadow-sm py-3"
+                    style="background:#16a34a;color:white;font-weight:700;font-size:1.05rem;border-radius:10px;border:none;"
+                    id="btnProcesar" disabled>
+                <i class="fa-solid fa-check me-2"></i>PROCESAR PRÉSTAMO
+            </button>
+
+            <div class="text-muted small mt-3 text-center">
+                <i class="fa-solid fa-server me-1"></i>Datos guardados en base de datos local — localhost:8080
+            </div>
+        </form>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    // Establecer fecha límite mínima = hoy
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('fechaLimite').min = hoy;
+    document.getElementById('fechaLimite').value = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+    let docenteEncontrado = false;
+
+    function buscarDocente() {
+        const dni = document.getElementById('dniInput').value.trim();
+        if (dni.length !== 8 || isNaN(dni)) {
+            alert('El DNI debe tener exactamente 8 dígitos numéricos.');
+            return;
+        }
+        fetch('/docentes/api/dni?dni=' + encodeURIComponent(dni))
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data) {
+                    document.getElementById('docenteNombre').textContent  = data.nombres;
+                    document.getElementById('docenteFacultad').textContent = data.facultad;
+                    document.getElementById('dniDocente').value = dni;
+                    document.getElementById('docenteInfo').style.display  = 'flex';
+                    document.getElementById('docenteError').style.display = 'none';
+                    docenteEncontrado = true;
+                    verificarFormulario();
+                } else {
+                    document.getElementById('docenteInfo').style.display  = 'none';
+                    document.getElementById('docenteError').style.display = 'flex';
+                    document.getElementById('dniDocente').value = '';
+                    docenteEncontrado = false;
+                    verificarFormulario();
+                }
+            }).catch(() => {
+                document.getElementById('docenteError').style.display = 'flex';
+            });
+    }
+
+    function actualizarInfoEquipo() {
+        const sel = document.getElementById('equipoSelect');
+        const info = document.getElementById('equipoEstado');
+        info.style.display = sel.value ? 'block' : 'none';
+        verificarFormulario();
+    }
+
+    function verificarFormulario() {
+        const equipoOk = document.getElementById('equipoSelect').value !== '';
+        const fechaOk  = document.getElementById('fechaLimite').value !== '';
+        document.getElementById('btnProcesar').disabled = !(docenteEncontrado && equipoOk && fechaOk);
+    }
+
+    document.getElementById('dniInput').addEventListener('keydown', function(e){
+        if (e.key === 'Enter') { e.preventDefault(); buscarDocente(); }
+    });
+    document.getElementById('fechaLimite').addEventListener('change', verificarFormulario);
+</script>
+</body>
+</html>

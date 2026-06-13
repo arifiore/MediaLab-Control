@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+
+<!-- ============================================================
+     SIDEBAR FRAGMENT  (th:fragment="sidebar(activePage)")
+     ============================================================ -->
+<nav id="sidebar" th:fragment="sidebar(activePage)">
+    <div class="sidebar-header">
+        <i class="fa-solid fa-video me-3 text-secondary"></i> MediaLab Control
+    </div>
+    <ul class="sidebar-menu">
+        <li th:classappend="${activePage == 'dashboard'} ? 'active' : ''">
+            <a th:href="@{/prestamos/dashboard}">
+                <i class="fa-solid fa-house"></i> Dashboard
+            </a>
+        </li>
+        <li th:classappend="${activePage == 'equipos'} ? 'active' : ''">
+            <a th:href="@{/equipos}">
+                <i class="fa-solid fa-boxes-stacked"></i> Equipos
+            </a>
+        </li>
+        <li th:classappend="${activePage == 'docentes'} ? 'active' : ''">
+            <a th:href="@{/docentes}">
+                <i class="fa-solid fa-users"></i> Docentes
+            </a>
+        </li>
+        <li th:classappend="${activePage == 'prestamos'} ? 'active' : ''">
+            <a th:href="@{/prestamos/registrar}">
+                <i class="fa-solid fa-handshake"></i> Préstamos
+            </a>
+        </li>
+        <li>
+            <a th:href="@{/prestamos/reporte/excel}">
+                <i class="fa-solid fa-file-excel"></i> Reporte Excel
+            </a>
+        </li>
+    </ul>
+</nav>
+
+<!-- ============================================================
+     HEAD FRAGMENT  (th:fragment="head(pageTitle)")
+     ============================================================ -->
+<th:block th:fragment="head(pageTitle)">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title th:text="${pageTitle} + ' | MediaLab Control'">MediaLab Control</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <style>
+        /* ===== GLOBAL ===== */
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            background-color: #f4f6f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            margin: 0;
+        }
+        .wrapper { display: flex; width: 100%; min-height: 100vh; }
+
+        /* ===== SIDEBAR ===== */
+        #sidebar {
+            min-width: 255px; max-width: 255px;
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            display: flex; flex-direction: column;
+            position: sticky; top: 0; height: 100vh; overflow-y: auto;
+        }
+        .sidebar-header {
+            padding: 22px 22px 16px;
+            font-size: 1.15rem; font-weight: 700;
+            display: flex; align-items: center;
+            color: #1e293b;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .sidebar-menu {
+            list-style: none; padding: 10px 0; margin: 0; flex: 1;
+        }
+        .sidebar-menu li a {
+            padding: 11px 22px;
+            display: flex; align-items: center;
+            color: #64748b;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: all 0.18s;
+            border-radius: 0 22px 22px 0;
+            margin-right: 18px;
+        }
+        .sidebar-menu li a i { width: 30px; font-size: 1.1rem; }
+        .sidebar-menu li.active > a,
+        .sidebar-menu li a:hover {
+            background: #eff6ff;
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        /* ===== MAIN AREA (topbar + content) ===== */
+        .main-area { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+
+        /* ===== TOPBAR ===== */
+        .topbar {
+            height: 62px;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex; align-items: center; justify-content: flex-end;
+            padding: 0 32px;
+            position: sticky; top: 0; z-index: 100;
+        }
+
+        /* ===== USER MENU ===== */
+        .user-menu-wrap { position: relative; }
+
+        .avatar-btn {
+            width: 38px; height: 38px; border-radius: 50%;
+            background: #dbeafe;
+            border: 1.5px solid #bfdbfe;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-weight: 700; font-size: 13px;
+            color: #1d4ed8; overflow: hidden;
+            transition: box-shadow 0.15s;
+            position: relative;
+        }
+        .avatar-btn:hover { box-shadow: 0 0 0 3px #bfdbfe; }
+        .avatar-btn img {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            object-fit: cover; border-radius: 50%;
+            display: none;
+        }
+
+        .user-popup {
+            position: absolute; right: 0; top: 48px;
+            width: 272px; z-index: 9999;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            overflow: hidden;
+            display: none;
+            animation: popupIn 0.15s ease;
+        }
+        @keyframes popupIn {
+            from { opacity:0; transform: translateY(-6px); }
+            to   { opacity:1; transform: translateY(0); }
+        }
+        .user-popup.open { display: block; }
+
+        /* Cabecera del popup */
+        .popup-header {
+            padding: 16px 16px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .avatar-large {
+            width: 50px; height: 50px; border-radius: 50%;
+            background: #dbeafe;
+            display: flex; align-items: center; justify-content: center;
+            position: relative; cursor: pointer; overflow: hidden; flex-shrink: 0;
+        }
+        .avatar-large span {
+            font-size: 18px; font-weight: 700; color: #1d4ed8;
+        }
+        .avatar-large img {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            object-fit: cover; border-radius: 50%;
+            display: none;
+        }
+        .avatar-overlay {
+            position: absolute; inset: 0; border-radius: 50%;
+            background: rgba(0,0,0,0.42);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.15s;
+        }
+        .avatar-overlay i { color: #fff; font-size: 16px; }
+        .avatar-large:hover .avatar-overlay { opacity: 1; }
+
+        .user-meta { flex: 1; min-width: 0; }
+        .user-name {
+            font-size: 14px; font-weight: 600; color: #1e293b;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .user-role-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            margin-top: 4px; font-size: 11px; font-weight: 600;
+            padding: 2px 9px; border-radius: 20px;
+            background: #dbeafe; color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+        .user-role-badge i { font-size: 10px; }
+
+        /* Items del popup */
+        .popup-section-label {
+            padding: 9px 16px 3px;
+            font-size: 10px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.06em;
+            color: #94a3b8;
+        }
+        .popup-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 16px;
+            font-size: 13px; color: #334155;
+            cursor: pointer; width: 100%;
+            background: transparent; border: none; text-align: left;
+            transition: background 0.12s;
+        }
+        .popup-item:hover { background: #f8fafc; }
+        .popup-item i { font-size: 16px; color: #64748b; width: 20px; flex-shrink: 0; }
+        .popup-item.danger { color: #dc2626; }
+        .popup-item.danger i { color: #dc2626; }
+        .popup-item.danger:hover { background: #fff5f5; }
+
+        .popup-divider { height: 1px; background: #f1f5f9; margin: 3px 0; }
+
+        /* Toggle tema */
+        .popup-toggle-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 16px; cursor: pointer;
+            transition: background 0.12s;
+        }
+        .popup-toggle-row:hover { background: #f8fafc; }
+        .toggle-left {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 13px; color: #334155;
+        }
+        .toggle-left i { font-size: 16px; color: #64748b; width: 20px; }
+        .toggle-switch {
+            width: 34px; height: 20px; border-radius: 10px;
+            background: #e2e8f0; position: relative;
+            transition: background 0.2s; flex-shrink: 0; border: none; cursor: pointer;
+        }
+        .toggle-switch::after {
+            content: ''; position: absolute;
+            width: 14px; height: 14px; border-radius: 50%;
+            background: #fff; top: 3px; left: 3px;
+            transition: transform 0.2s;
+        }
+        .toggle-switch.on { background: #2563eb; }
+        .toggle-switch.on::after { transform: translateX(14px); }
+
+/* ===== DARK MODE — variables globales ===== */
+body.dark-mode {
+    --dm-bg:        #0f172a;
+    --dm-surface:   #1e293b;
+    --dm-border:    #334155;
+    --dm-text:      #e2e8f0;
+    --dm-muted:     #94a3b8;
+    --dm-subtle:    #cbd5e1;
+
+    background-color: var(--dm-bg);
+    color: var(--dm-text);
+}
+
+/* Superficies blancas */
+body.dark-mode #sidebar,
+body.dark-mode .topbar,
+body.dark-mode .stat-card,
+body.dark-mode .panel-card,
+body.dark-mode .table-card,
+body.dark-mode .filter-section,
+body.dark-mode .form-section,
+body.dark-mode .user-popup,
+body.dark-mode .modal-content,
+body.dark-mode .table-footer {
+    background-color: var(--dm-surface);
+    border-color: var(--dm-border);
+}
+
+/* Textos primarios (negros/grises oscuros que desaparecen) */
+body.dark-mode .page-title,
+body.dark-mode .breadcrumb-text,
+body.dark-mode .user-name,
+body.dark-mode .panel-header,
+body.dark-mode .section-title,
+body.dark-mode .sidebar-header,
+body.dark-mode .popup-item,
+body.dark-mode .toggle-left,
+body.dark-mode .filter-section label,
+body.dark-mode h1, body.dark-mode h2,
+body.dark-mode h3, body.dark-mode h4,
+body.dark-mode p, body.dark-mode span,
+body.dark-mode label {
+    color: var(--dm-text);
+}
+
+/* Textos secundarios/apagados */
+body.dark-mode .stat-info h6,
+body.dark-mode .breadcrumb-text,
+body.dark-mode .text-muted,
+body.dark-mode small,
+body.dark-mode .popup-section-label {
+    color: var(--dm-muted) !important;
+}
+
+/* KPI números */
+body.dark-mode .stat-info h3 { color: #f1f5f9; }
+
+/* Sidebar links */
+body.dark-mode .sidebar-menu li a { color: var(--dm-muted); }
+body.dark-mode .sidebar-menu li.active > a,
+body.dark-mode .sidebar-menu li a:hover {
+    background: rgba(37,99,235,0.15);
+    color: #60a5fa;
+}
+
+/* Tablas */
+body.dark-mode .table thead th {
+    background: #0f172a;
+    color: var(--dm-muted);
+    border-color: var(--dm-border);
+}
+body.dark-mode .table tbody td {
+    color: var(--dm-subtle);
+    border-color: var(--dm-surface);
+}
+body.dark-mode .table tbody tr:hover { background: #0f172a; }
+body.dark-mode .table-footer .text-muted { color: var(--dm-muted) !important; }
+
+/* Inputs y selects */
+body.dark-mode .form-control,
+body.dark-mode .form-select {
+    background-color: #0f172a;
+    border-color: var(--dm-border);
+    color: var(--dm-text);
+}
+body.dark-mode .form-control::placeholder { color: var(--dm-muted); }
+body.dark-mode .form-control:focus,
+body.dark-mode .form-select:focus {
+    background-color: #0f172a;
+    border-color: #2563eb;
+    color: var(--dm-text);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.25);
+}
+
+/* Botones */
+body.dark-mode .btn-action {
+    background: var(--dm-surface);
+    border-color: var(--dm-border);
+    color: var(--dm-muted);
+}
+body.dark-mode .btn-action:hover {
+    background: #0f172a;
+    color: var(--dm-text);
+}
+body.dark-mode .btn-light,
+body.dark-mode .btn-outline-secondary {
+    background: var(--dm-surface);
+    border-color: var(--dm-border);
+    color: var(--dm-text);
+}
+
+/* Alerts */
+body.dark-mode .alert-success {
+    background: #14532d;
+    border-color: #166534;
+    color: #bbf7d0;
+}
+body.dark-mode .alert-danger {
+    background: #450a0a;
+    border-color: #7f1d1d;
+    color: #fecaca;
+}
+
+/* Popup y dividers */
+body.dark-mode .popup-header,
+body.dark-mode .popup-divider { border-color: var(--dm-border); }
+body.dark-mode .popup-item:hover { background: #0f172a; }
+body.dark-mode .popup-toggle-row:hover { background: #0f172a; }
+body.dark-mode .popup-item.danger { color: #f87171; }
+body.dark-mode .popup-item.danger i { color: #f87171; }
+
+        /* ===== MAIN CONTENT ===== */
+        #content { flex: 1; padding: 28px 36px; min-width: 0; }
+
+        /* ===== PAGE HEADER ===== */
+        .page-header {
+            display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 24px;
+        }
+        .page-title { font-weight: 700; font-size: 1.55rem; color: #1e293b; margin: 0; }
+        .breadcrumb-text { color: #94a3b8; font-weight: 400; font-size: 1.3rem; }
+
+        /* ===== STAT CARDS ===== */
+        .stat-card {
+            background: #fff; border-radius: 14px;
+            border: 1px solid #e2e8f0; padding: 20px;
+            display: flex; align-items: center; gap: 16px;
+            transition: box-shadow 0.2s;
+        }
+        .stat-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.07); }
+        .stat-icon {
+            width: 60px; height: 60px; border-radius: 12px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 26px; flex-shrink: 0;
+        }
+        .bg-blue   { background:#dbeafe; color:#2563eb; }
+        .bg-green  { background:#dcfce7; color:#16a34a; }
+        .bg-orange { background:#ffedd5; color:#ea580c; }
+        .bg-red    { background:#fee2e2; color:#dc2626; }
+        .stat-info h6 { margin:0; color:#64748b; font-size:0.88rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+        .stat-info h3 { margin:4px 0 0; font-weight:800; font-size:2rem; color:#0f172a; }
+
+        /* ===== PANEL CARD ===== */
+        .panel-card {
+            background:#fff; border-radius:14px;
+            border:1px solid #e2e8f0; overflow:hidden; height:100%;
+        }
+        .panel-header {
+            padding:18px 22px;
+            border-bottom:1px solid #f1f5f9;
+            font-weight:700; font-size:1.05rem; color:#1e293b;
+            display:flex; align-items:center; justify-content:space-between;
+        }
+
+        /* ===== TABLES ===== */
+        .table-card { background:#fff; border-radius:14px; border:1px solid #e2e8f0; overflow:hidden; }
+        .table thead th {
+            background:#f8fafc; color:#475569;
+            font-weight:600; font-size:0.83rem;
+            text-transform:uppercase; letter-spacing:.05em;
+            border-bottom:1px solid #e2e8f0; padding:14px 16px;
+        }
+        .table tbody td { padding:13px 16px; vertical-align:middle; color:#334155; border-bottom:1px solid #f1f5f9; }
+        .table tbody tr:last-child td { border-bottom:none; }
+        .table tbody tr:hover { background:#f8fafc; }
+
+        /* ===== BADGES ===== */
+        .badge-disponible  { background:#dcfce7; color:#16a34a; padding:5px 12px; border-radius:6px; font-weight:600; font-size:0.8rem; border:1px solid #bbf7d0; }
+        .badge-prestado    { background:#ffedd5; color:#ea580c; padding:5px 12px; border-radius:6px; font-weight:600; font-size:0.8rem; border:1px solid #fed7aa; }
+        .badge-mantenimiento { background:#fee2e2; color:#dc2626; padding:5px 12px; border-radius:6px; font-weight:600; font-size:0.8rem; border:1px solid #fecaca; }
+        .badge-activo      { background:#dcfce7; color:#16a34a; padding:5px 12px; border-radius:6px; font-weight:600; font-size:0.8rem; border:1px solid #bbf7d0; }
+        .badge-inactivo    { background:#f1f5f9; color:#64748b; padding:5px 12px; border-radius:6px; font-weight:600; font-size:0.8rem; border:1px solid #e2e8f0; }
+        .badge-mora        { background:#fee2e2; color:#dc2626; padding:5px 12px; border-radius:6px; font-weight:700; font-size:0.8rem; border:1px solid #fecaca; }
+
+        /* ===== ACTION BUTTONS ===== */
+        .btn-action {
+            background:white; border:1px solid #e2e8f0;
+            color:#64748b; border-radius:7px;
+            padding:5px 9px; margin-right:3px;
+            transition:all 0.15s; font-size:0.85rem;
+        }
+        .btn-action:hover { background:#f1f5f9; color:#1e293b; border-color:#cbd5e1; }
+        .btn-action.danger:hover { background:#fee2e2; color:#dc2626; border-color:#fca5a5; }
+
+        /* ===== FILTER SECTION ===== */
+        .filter-section {
+            background:#fff; border-radius:14px;
+            border:1px solid #e2e8f0; padding:20px; margin-bottom:22px;
+        }
+        .filter-section label { font-size:0.85rem; font-weight:600; color:#475569; margin-bottom:5px; }
+
+        /* ===== TABLE FOOTER ===== */
+        .table-footer {
+            padding:14px 18px;
+            display:flex; justify-content:space-between; align-items:center;
+            border-top:1px solid #f1f5f9;
+        }
+        .pagination-btn {
+            border:1px solid #e2e8f0; background:white;
+            padding:5px 11px; border-radius:7px;
+            color:#475569; text-decoration:none; margin:0 2px;
+            font-size:0.88rem; transition:all 0.15s;
+        }
+        .pagination-btn:hover { background:#f1f5f9; }
+        .pagination-btn.active { background:#2563eb; color:white; border-color:#2563eb; }
+
+        /* ===== FORM SECTION ===== */
+        .form-section {
+            background:#fff; border-radius:14px;
+            border:1px solid #e2e8f0; padding:24px; margin-bottom:20px;
+        }
+        .step-badge {
+            background:#2563eb; color:white;
+            width:28px; height:28px; border-radius:50%;
+            display:inline-flex; align-items:center; justify-content:center;
+            font-weight:700; font-size:0.88rem; margin-right:10px; flex-shrink:0;
+        }
+        .section-title { display:flex; align-items:center; margin-bottom:18px; font-weight:600; font-size:1.05rem; color:#1e293b; }
+
+        /* ===== ALERTS ===== */
+        .alert { border-radius:10px; }
+
+        /* ===== BTN BLUE ===== */
+        .btn-blue { background-color:#2563eb; color:white; border-radius:8px; font-weight:500; border:none; }
+        .btn-blue:hover { background-color:#1d4ed8; color:white; }
+
+        /* ===== MODAL ===== */
+        .modal-content { border-radius:14px; border:1px solid #e2e8f0; }
+        .modal-header { border-bottom:1px solid #f1f5f9; }
+        .modal-footer { border-top:1px solid #f1f5f9; }
+    </style>
+</th:block>
+
+<!-- ============================================================
+     TOPBAR FRAGMENT  (th:fragment="topbar")
+     Barra superior con menú de usuario — incluir dentro de .main-area
+     ============================================================ -->
+<header class="topbar" th:fragment="topbar">
+    <div class="user-menu-wrap">
+
+        <!-- Botón avatar -->
+        <button class="avatar-btn" id="avatarBtn"
+                onclick="mlToggleMenu(event)"
+                aria-haspopup="true" aria-expanded="false"
+                aria-label="Menú de usuario">
+            <span id="avatarInitials"
+                  th:text="${#authentication != null ? #authentication.name.substring(0,2).toUpperCase() : 'OP'}">OP</span>
+            <img id="avatarImgBtn" alt="Foto de perfil"/>
+        </button>
+
+        <!-- Popup -->
+        <div class="user-popup" id="userPopup" role="dialog" aria-label="Perfil de usuario">
+
+            <!-- Cabecera: avatar + nombre + rol -->
+            <div class="popup-header">
+                <div class="avatar-large" onclick="mlTriggerImg()" title="Cambiar imagen">
+                    <span id="bigInitials"
+                          th:text="${#authentication != null ? #authentication.name.substring(0,2).toUpperCase() : 'OP'}">OP</span>
+                    <img id="bigImgEl" alt="Foto"/>
+                    <div class="avatar-overlay">
+                        <i class="fa-solid fa-camera"></i>
+                    </div>
+                </div>
+                <div class="user-meta">
+                    <div class="user-name"
+                         th:text="${#authentication != null ? #authentication.name : 'Operador'}">Operador</div>
+                    <div class="user-role-badge">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span th:text="${#authentication != null
+                            ? #authentication.authorities[0].authority.replace('ROLE_','')
+                            : 'USUARIO'}">USUARIO</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input oculto para subir imagen -->
+            <input type="file" id="mlImgInput" accept="image/*"
+                   style="display:none;" onchange="mlHandleImg(event)"/>
+
+            <!-- Cambiar imagen -->
+            <button class="popup-item" onclick="mlTriggerImg()">
+                <i class="fa-solid fa-camera-rotate"></i>
+                Cambiar imagen de perfil
+            </button>
+
+            <div class="popup-divider"></div>
+
+            <!-- Opciones -->
+            <div class="popup-section-label">Opciones</div>
+
+            <div class="popup-toggle-row" onclick="mlToggleTheme()" role="button" tabindex="0">
+                <div class="toggle-left">
+                    <i class="fa-solid fa-moon" id="themeIcon"></i>
+                    <span id="themeLabel">Tema oscuro</span>
+                </div>
+                <button class="toggle-switch" id="themeToggle"
+                        onclick="event.stopPropagation(); mlToggleTheme()"
+                        aria-label="Cambiar tema"></button>
+            </div>
+
+            <div class="popup-divider"></div>
+
+            <!-- Cerrar sesión -->
+            <form th:action="@{/logout}" method="post" style="margin:0;">
+                <button type="submit" class="popup-item danger">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    Cerrar sesión
+                </button>
+            </form>
+
+            <!-- Cambiar de cuenta (redirige al login sin invalidar sesión actual visualmente) -->
+            <form th:action="@{/logout}" method="post" style="margin:0;">
+                <button type="submit" class="popup-item danger">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                    Cambiar de cuenta
+                </button>
+            </form>
+
+        </div>
+    </div>
+</header>
+
+<!-- ============================================================
+     SCRIPTS FRAGMENT
+     ============================================================ -->
+<th:block th:fragment="scripts">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        /* ---- Auto-dismiss alerts ---- */
+        document.querySelectorAll('.alert-dismissible').forEach(function(a){
+            setTimeout(function(){ bootstrap.Alert.getOrCreateInstance(a)?.close(); }, 4000);
+        });
+
+        /* ---- User Menu ---- */
+        var mlMenuOpen = false;
+
+        function mlToggleMenu(e) {
+            e.stopPropagation();
+            mlMenuOpen = !mlMenuOpen;
+            var popup = document.getElementById('userPopup');
+            var btn   = document.getElementById('avatarBtn');
+            popup.classList.toggle('open', mlMenuOpen);
+            btn.setAttribute('aria-expanded', mlMenuOpen);
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!mlMenuOpen) return;
+            var wrap = document.querySelector('.user-menu-wrap');
+            if (wrap && !wrap.contains(e.target)) {
+                mlMenuOpen = false;
+                document.getElementById('userPopup').classList.remove('open');
+                document.getElementById('avatarBtn').setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && mlMenuOpen) {
+                mlMenuOpen = false;
+                document.getElementById('userPopup').classList.remove('open');
+                document.getElementById('avatarBtn').focus();
+            }
+        });
+
+        /* ---- Cambiar imagen de perfil ---- */
+        function mlTriggerImg() {
+            document.getElementById('mlImgInput').click();
+        }
+
+        function mlHandleImg(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                var src = ev.target.result;
+                /* Avatar grande en popup */
+                var bigImg  = document.getElementById('bigImgEl');
+                var bigInit = document.getElementById('bigInitials');
+                bigImg.src = src;
+                bigImg.style.display = 'block';
+                bigInit.style.display = 'none';
+                /* Avatar pequeño en topbar */
+                var btnImg  = document.getElementById('avatarImgBtn');
+                var btnInit = document.getElementById('avatarInitials');
+                btnImg.src = src;
+                btnImg.style.display = 'block';
+                btnInit.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        /* ---- Toggle Dark Mode ---- */
+        var mlDarkOn = false;
+
+        function mlToggleTheme() {
+            mlDarkOn = !mlDarkOn;
+            document.body.classList.toggle('dark-mode', mlDarkOn);
+            var toggle = document.getElementById('themeToggle');
+            var icon   = document.getElementById('themeIcon');
+            var label  = document.getElementById('themeLabel');
+            toggle.classList.toggle('on', mlDarkOn);
+            icon.className  = mlDarkOn ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            label.textContent = mlDarkOn ? 'Tema claro' : 'Tema oscuro';
+            /* Persistir preferencia en localStorage */
+            localStorage.setItem('mlDark', mlDarkOn ? '1' : '0');
+        }
+
+        /* Restaurar tema al cargar página */
+        (function() {
+            if (localStorage.getItem('mlDark') === '1') {
+                mlDarkOn = true;
+                document.body.classList.add('dark-mode');
+                var t = document.getElementById('themeToggle');
+                var i = document.getElementById('themeIcon');
+                var l = document.getElementById('themeLabel');
+                if (t) { t.classList.add('on'); }
+                if (i) { i.className = 'fa-solid fa-sun'; }
+                if (l) { l.textContent = 'Tema claro'; }
+            }
+        })();
+    </script>
+</th:block>
+
+</body>
+</html>
